@@ -1756,7 +1756,7 @@ function library:Init()
 		syn.protect_gui(self.base)
 		self.base.Parent = game:GetService"CoreGui"
 	elseif get_hidden_gui then
-		get_hidden_gui(self.base)
+		self.base.Parent = get_hidden_gui()
 	elseif gethui then
 		self.base.Parent = gethui()
 	else
