@@ -677,6 +677,11 @@ local function createSlider(option, parent)
 end
 local function createList(option, parent, holder)
 	local valueCount = 0
+	local idleColor = Color3.fromRGB(30, 30, 30)
+	local hoverColor = Color3.fromRGB(20, 20, 20)
+	local clickColor = Color3.fromRGB(10, 10, 10)
+	local selectedIdleColor = Color3.fromRGB(130, 40, 40)
+	local selectedHoverColor = Color3.fromRGB(155, 50, 50)
 	local main = library:Create("Frame", {
 		LayoutOrder = option.position,
 		Size = UDim2.new(1, 0, 0, 52),
@@ -841,8 +846,9 @@ local function createList(option, parent, holder)
 			Parent = content
 		})
 		local isSelected = option.multi and option.selected[value] or false
-		if option.multi and isSelected then
-			label.BackgroundColor3 = Color3.fromRGB(70, 20, 20)
+		label:SetAttribute("Selected", isSelected)
+		if isSelected then
+			label.BackgroundColor3 = selectedIdleColor
 		end
 		local inContact
 		local clicking
@@ -852,7 +858,7 @@ local function createList(option, parent, holder)
 				if option.multi then
 					self:ToggleValue(value, label)
 				else
-					tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(10, 10, 10)}):Play()
+					tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = clickColor}):Play()
 					self:SetValue(value)
 					self:Close()
 				end
@@ -861,7 +867,7 @@ local function createList(option, parent, holder)
 				if option.multi then
 					self:ToggleValue(value, label)
 				else
-					tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(10, 10, 10)}):Play()
+					tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = clickColor}):Play()
 					self:SetValue(value)
 					self:Close()
 				end
@@ -869,22 +875,24 @@ local function createList(option, parent, holder)
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
 				inContact = true
 				if not clicking then
-					tweenService:Create(label, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(20, 20, 20)}):Play()
+					local selected = label:GetAttribute("Selected")
+					tweenService:Create(label, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = selected and selectedHoverColor or hoverColor}):Play()
 				end
 			end
 		end)
 		label.InputEnded:Connect(function(input)
+			local selected = label:GetAttribute("Selected")
 			if input.UserInputType == ui then
 				clicking = false
-				tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = inContact and Color3.fromRGB(20, 20, 20) or Color3.fromRGB(30, 30, 30)}):Play()
+				tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = inContact and (selected and selectedHoverColor or hoverColor) or (selected and selectedIdleColor or idleColor)}):Play()
 			elseif input.UserInputType == Enum.UserInputType.Touch then
 				clicking = false
-				tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = inContact and Color3.fromRGB(20, 20, 20) or Color3.fromRGB(30, 30, 30)}):Play()
+				tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = inContact and (selected and selectedHoverColor or hoverColor) or (selected and selectedIdleColor or idleColor)}):Play()
 			end
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
 				inContact = false
 				if not clicking then
-					tweenService:Create(label, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play()
+					tweenService:Create(label, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = selected and selectedIdleColor or idleColor}):Play()
 				end
 			end
 		end)
@@ -937,10 +945,12 @@ local function createList(option, parent, holder)
 	function option:ToggleValue(value, label)
 		if self.selected[value] then
 			self.selected[value] = nil
-			tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play()
+			label:SetAttribute("Selected", false)
+			tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = idleColor}):Play()
 		else
 			self.selected[value] = true
-			tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(70, 20, 20)}):Play()
+			label:SetAttribute("Selected", true)
+			tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = selectedIdleColor}):Play()
 		end
 		local vals = {}
 		for v, _ in next, self.selected do
@@ -962,6 +972,14 @@ local function createList(option, parent, holder)
 		self.selected = {}
 		for _, v in next, tbl do
 			self.selected[tostring(v)] = true
+		end
+		for _, label in next, content:GetChildren() do
+			if label:IsA"TextLabel" then
+				local rawValue = label.Text:gsub("^%s+", "")
+				local selected = self.selected[rawValue] or false
+				label:SetAttribute("Selected", selected)
+				label.BackgroundColor3 = selected and selectedIdleColor or idleColor
+			end
 		end
 		local vals = {}
 		for v, _ in next, self.selected do
