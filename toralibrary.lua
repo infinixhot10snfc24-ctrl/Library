@@ -52,10 +52,10 @@ function library:Create(class, properties)
 			inst[property] = value
 		end
 	end
-	if (class == "TextLabel" or class == "TextBox") and self.font then
+	if (class == "TextLabel" or class == "TextBox" or class == "TextButton") and self.font then
 		inst.Font = resolveFont(self.font)
 	end
-	if class == "TextLabel" or class == "TextBox" then
+	if class == "TextLabel" or class == "TextBox" or class == "TextButton" then
 		table.insert(registeredTextObjects, inst)
 	end
 	return inst
@@ -226,10 +226,11 @@ local function createLabel(option, parent)
 	end})
 end
 local function createToggle(option, parent)
-	local main = library:Create("TextLabel", {
+	local main = library:Create("TextButton", {
 		LayoutOrder = option.position,
 		Size = UDim2.new(1, 0, 0, 31),
 		BackgroundTransparency = 1,
+		AutoButtonColor = false,
 		Text = " " .. option.text,
 		TextSize = 17,
 		Font = Enum.Font.GothamBlack,
@@ -276,12 +277,10 @@ local function createToggle(option, parent)
 		Parent = checkmarkHolder
 	})
 	local inContact
+	main.Activated:Connect(function()
+		option:SetState(not option.state)
+	end)
 	main.InputBegan:Connect(function(input)
-		if input.UserInputType == ui then
-			option:SetState(not option.state)
-		elseif input.UserInputType == Enum.UserInputType.Touch then
-			option:SetState(not option.state)
-		end
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			inContact = true
 			if not option.state then
@@ -793,7 +792,7 @@ local function createList(option, parent, holder)
 			tweenService:Create(option.mainHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {ImageTransparency = 0, Position = UDim2.new(0, position.X - 5, 0, position.Y - 4)}):Play()
 			tweenService:Create(option.mainHolder, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {Position = UDim2.new(0, position.X - 5, 0, position.Y + 1)}):Play()
 			for _,label in next, content:GetChildren() do
-				if label:IsA"TextLabel" then
+				if label:IsA"TextButton" then
 					tweenService:Create(label, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
 				end
 			end
@@ -810,7 +809,7 @@ local function createList(option, parent, holder)
 			tweenService:Create(option.mainHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {ImageTransparency = 0, Position = UDim2.new(0, position.X - 5, 0, position.Y - 4)}):Play()
 			tweenService:Create(option.mainHolder, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, false, 0.1), {Position = UDim2.new(0, position.X - 5, 0, position.Y + 1)}):Play()
 			for _,label in next, content:GetChildren() do
-				if label:IsA"TextLabel" then
+				if label:IsA"TextButton" then
 					tweenService:Create(label, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
 				end
 			end
@@ -832,11 +831,12 @@ local function createList(option, parent, holder)
 	end)
 	function option:AddValue(value)
 		valueCount = valueCount + 1
-		local label = library:Create("TextLabel", {
+		local label = library:Create("TextButton", {
 			ZIndex = 3,
 			Size = UDim2.new(1, 0, 0, 40),
 			BackgroundColor3 = Color3.fromRGB(30, 30, 30),
 			BorderSizePixel = 0,
+			AutoButtonColor = false,
 			Text = "    " .. value,
 			TextSize = 14,
 			TextTransparency = self.open and 0 or 1,
@@ -852,25 +852,22 @@ local function createList(option, parent, holder)
 		end
 		local inContact
 		local clicking
+		label.Activated:Connect(function()
+			if option.multi then
+				self:ToggleValue(value, label)
+			else
+				self:SetValue(value)
+				self:Close()
+			end
+		end)
 		label.InputBegan:Connect(function(input)
 			if input.UserInputType == ui then
 				clicking = true
-				if option.multi then
-					self:ToggleValue(value, label)
-				else
+				if not option.multi then
 					tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = clickColor}):Play()
-					self:SetValue(value)
-					self:Close()
 				end
 			elseif input.UserInputType == Enum.UserInputType.Touch then
 				clicking = true
-				if option.multi then
-					self:ToggleValue(value, label)
-				else
-					tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = clickColor}):Play()
-					self:SetValue(value)
-					self:Close()
-				end
 			end
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
 				inContact = true
@@ -882,10 +879,7 @@ local function createList(option, parent, holder)
 		end)
 		label.InputEnded:Connect(function(input)
 			local selected = label:GetAttribute("Selected")
-			if input.UserInputType == ui then
-				clicking = false
-				tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = inContact and (selected and selectedHoverColor or hoverColor) or (selected and selectedIdleColor or idleColor)}):Play()
-			elseif input.UserInputType == Enum.UserInputType.Touch then
+			if input.UserInputType == ui or input.UserInputType == Enum.UserInputType.Touch then
 				clicking = false
 				tweenService:Create(label, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = inContact and (selected and selectedHoverColor or hoverColor) or (selected and selectedIdleColor or idleColor)}):Play()
 			end
@@ -914,7 +908,7 @@ local function createList(option, parent, holder)
 	end
 	function option:RemoveValue(value)
 		for _,label in next, content:GetChildren() do
-			if label:IsA"TextLabel" and label.Text == "    " .. value then
+			if label:IsA"TextButton" and label.Text == "    " .. value then
 				label:Destroy()
 				valueCount = valueCount - 1
 				break
@@ -974,7 +968,7 @@ local function createList(option, parent, holder)
 			self.selected[tostring(v)] = true
 		end
 		for _, label in next, content:GetChildren() do
-			if label:IsA"TextLabel" then
+			if label:IsA"TextButton" then
 				local rawValue = label.Text:gsub("^%s+", "")
 				local selected = self.selected[rawValue] or false
 				label:SetAttribute("Selected", selected)
@@ -1016,7 +1010,7 @@ local function createList(option, parent, holder)
 		tweenService:Create(round, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageColor3 = inContact and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(40, 40, 40)}):Play()
 		tweenService:Create(self.mainHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 1, Position = UDim2.new(0, position.X - 5, 0, position.Y -10)}):Play()
 		for _,label in next, content:GetChildren() do
-			if label:IsA"TextLabel" then
+			if label:IsA"TextButton" then
 				tweenService:Create(label, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
 			end
 		end
